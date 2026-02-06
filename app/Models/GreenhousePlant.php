@@ -14,19 +14,4 @@ class GreenhousePlant extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-    public function devices()
-    {
-        return $this->hasMany(Device::class, 'plant_id');
-    }
-
-    public function sensorLogs()
-    {
-        return $this->hasMany(SensorLog::class, 'plant_id');
-    }
-
-    public function chosenPlans()
-    {
-        return $this->hasMany(ChosenPlan::class, 'plant_id');
-    }
 }

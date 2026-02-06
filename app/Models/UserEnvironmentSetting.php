@@ -2,12 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class UserEnvironmentSetting extends Model
 {
-    use HasFactory;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -17,9 +16,4 @@ class UserEnvironmentSetting extends Model
         'soil_moisture',
         'is_customized',
     ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 }

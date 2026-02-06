@@ -12,7 +12,6 @@ class EnvironmentController extends Controller
     {
         $validated = $request->validate([
             'plan_name' => 'required|string|in:Herb Plants,Vegetable Plants,Flower Plants,Fruit Plants,Medicinal Plants',
-
         ]);
 
         $plans = [
@@ -22,27 +21,26 @@ class EnvironmentController extends Controller
                 'soil_moisture' => 60,
             ],
             'Vegetable Plants' => [
-        'temperature' => 26,
-        'humidity' => 70,
-        'soil_moisture' => 65,
-    ],
-    'Flower Plants' => [
-        'temperature' => 24,
-        'humidity' => 60,
-        'soil_moisture' => 50,
-    ],
-    'Fruit Plants' => [
-        'temperature' => 28,
-        'humidity' => 75,
-        'soil_moisture' => 70,
-    ],
-    'Medicinal Plants' => [
-        'temperature' => 23,
-        'humidity' => 65,
-        'soil_moisture' => 55,
-    ],
-];
-
+                'temperature' => 26,
+                'humidity' => 70,
+                'soil_moisture' => 65,
+            ],
+            'Flower Plants' => [
+                'temperature' => 24,
+                'humidity' => 60,
+                'soil_moisture' => 50,
+            ],
+            'Fruit Plants' => [
+                'temperature' => 28,
+                'humidity' => 75,
+                'soil_moisture' => 70,
+            ],
+            'Medicinal Plants' => [
+                'temperature' => 23,
+                'humidity' => 65,
+                'soil_moisture' => 55,
+            ],
+        ];
 
         $planData = $plans[$validated['plan_name']];
 

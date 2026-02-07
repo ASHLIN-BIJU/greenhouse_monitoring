@@ -1,34 +1,250 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Live Sensor Test</title>
+    <title>Live Sensor Monitor</title>
+    <style>
+        :root {
+            --primary: #2ecc71;
+            --bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial;
+            text-align: center;
+            background: var(--bg);
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        .status {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .connecting {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+
+        .connected {
+            background: #dff9fb;
+            color: #0984e3;
+        }
+
+        .reading-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .box {
+            background: #fdfdfd;
+            border: 1px solid #eee;
+            padding: 20px;
+            border-radius: 15px;
+            transition: 0.3s;
+        }
+
+        .box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .label {
+            display: block;
+            font-size: 16px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .value-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sub-box {
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .actual {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .target {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .unit {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .sub-label {
+            font-size: 12px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
 </head>
+
 <body>
-<h2>Live Sensor Data</h2>
-<pre id="output">Waiting...</pre>
 
-<script src="https://cdn.jsdelivr.net/npm/laravel-echo@1/dist/echo.iife.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pusher-js@8"></script>
+    <div class="container">
+        <h1>🌿 Greenhouse Real-time Monitor</h1>
+        <div id="status" class="status connecting">Connecting to WebSocket...</div>
 
-<script>
-window.Pusher = Pusher;
+        <div class="reading-grid">
+            <!-- Temperature -->
+            <div class="box">
+                <span class="label">🌡 Temperature</span>
+                <div class="value-group">
+                    <div class="sub-box actual">
+                        <span class="sub-label">Now</span>
+                        <span class="value" id="temp">--</span><span class="unit">°C</span>
+                    </div>
+                    <div class="sub-box target">
+                        <span class="sub-label">Target</span>
+                        <span class="value" id="temp_target">--</span><span class="unit">°C</span>
+                    </div>
+                </div>
+            </div>
 
-window.Echo = new Echo({
-    broadcaster: 'reverb',
-    key: 'local',
-    wsHost: window.location.hostname,
-    wsPort: 8080,
-    forceTLS: false,
-    disableStats: true,
-});
+            <!-- Humidity -->
+            <div class="box">
+                <span class="label">💧 Humidity</span>
+                <div class="value-group">
+                    <div class="sub-box actual">
+                        <span class="sub-label">Now</span>
+                        <span class="value" id="hum">--</span><span class="unit">%</span>
+                    </div>
+                    <div class="sub-box target">
+                        <span class="sub-label">Target</span>
+                        <span class="value" id="hum_target">--</span><span class="unit">%</span>
+                    </div>
+                </div>
+            </div>
 
-const userId = 6; // change to your logged user id
+            <!-- Soil Moisture -->
+            <div class="box">
+                <span class="label">🌱 Soil Moisture</span>
+                <div class="value-group">
+                    <div class="sub-box actual">
+                        <span class="sub-label">Now</span>
+                        <span class="value" id="soil">--</span><span class="unit">%</span>
+                    </div>
+                    <div class="sub-box target">
+                        <span class="sub-label">Target</span>
+                        <span class="value" id="soil_target">--</span><span class="unit">%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-Echo.channel('sensor.' + userId)
-    .listen('SensorUpdated', (e) => {
-        document.getElementById('output').innerText =
-            JSON.stringify(e.data, null, 2);
-    });
-</script>
+        <p style="margin-top: 30px; font-size: 12px; color: #bdc3c7;">Persisting 100% of sensor changes to database.
+            Monitoring User ID: 6</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo/dist/echo.iife.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pusher-js/dist/web/pusher.min.js"></script>
+
+    <script>
+        window.Pusher = Pusher;
+
+        // 🔁 CONFIGURATION
+        const userId = 6;
+        const REVERB_KEY = 'pyagbybv7uh9d8scjusx';
+
+        const echo = new Echo({
+            broadcaster: 'reverb',
+            key: REVERB_KEY,
+            wsHost: '127.0.0.1',
+            wsPort: 8080,
+            forceTLS: false,
+            disableStats: true,
+            enabledTransports: ['ws', 'wss']
+        });
+
+        const statusEl = document.getElementById('status');
+
+        const updateActual = (data) => {
+            if (!data) return;
+            document.getElementById('temp').innerText = parseFloat(data.temperature).toFixed(1);
+            document.getElementById('hum').innerText = parseFloat(data.humidity).toFixed(1);
+            document.getElementById('soil').innerText = parseFloat(data.soil_moisture).toFixed(1);
+        };
+
+        const updateTarget = (data) => {
+            if (!data) return;
+            document.getElementById('temp_target').innerText = parseFloat(data.temperature).toFixed(1);
+            document.getElementById('hum_target').innerText = parseFloat(data.humidity).toFixed(1);
+            document.getElementById('soil_target').innerText = parseFloat(data.soil_moisture).toFixed(1);
+        };
+
+        // Connection Event
+        console.log("Setting up echo for user:", userId);
+
+        echo.connector.pusher.connection.bind('connected', () => {
+            statusEl.innerText = "Connected to Live Feed";
+            statusEl.className = "status connected";
+            console.log("Successfully connected to Reverb!");
+        });
+
+        echo.connector.pusher.connection.bind('error', (err) => {
+            statusEl.innerText = "Connection Error!";
+            statusEl.className = "status connecting";
+            console.error("WebSocket Error:", err);
+            if (err.error && err.error.data) {
+                console.error("Error Detail:", err.error.data.code, err.error.data.message);
+            }
+        });
+
+        echo.connector.pusher.connection.bind('state_change', (states) => {
+            console.log("Connection State Changed:", states.current);
+            if (states.current === 'unavailable') {
+                statusEl.innerText = "Reverb Server Offline!";
+            }
+        });
+
+        echo.channel(`sensor.${userId}`)
+            .listen('SensorUpdated', (e) => {
+                console.log("New data received:", e);
+                updateActual(e.data.actual);
+                updateTarget(e.data.target);
+            });
+
+        // INITIAL FETCHING (Simulation since this is public/ and doesn't have Token)
+        // In a real app, these would be API calls with an Auth token.
+        // For verification, we show initial "--" until the first sensor data arrives.
+    </script>
+
 </body>
+
 </html>

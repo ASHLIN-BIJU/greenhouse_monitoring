@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>DIAGNOSTIC - Live Monitor</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #222;
+            color: #0f0;
+            padding: 20px;
+        }
+
+        #logs {
+            border: 1px solid #444;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+            background: #000;
+            margin-top: 20px;
+        }
+
+        .error {
+            color: #f00;
+        }
+
+        .box {
+            border: 1px solid #0f0;
+            padding: 10px;
+            display: inline-block;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🛠 WebSocket Diagnostics</h1>
+    <div id="status">Status: IDLE</div>
+    <div id="connection">Connection: DISCONNECTED</div>
+
+    <div class="box">Temp: <span id="temp">--</span></div>
+    <div class="box">Hum: <span id="hum">--</span></div>
+    <div class="box">Soil: <span id="soil">--</span></div>
+
+    <h3>📜 Log Stream:</h3>
+    <div id="logs"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo/dist/echo.iife.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pusher-js/dist/web/pusher.min.js"></script>
+
+    <script>
+        const log = (msg, isError = false) => {
+            const div = document.createElement('div');
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            if (isError) div.className = 'error';
+            const logs = document.getElementById('logs');
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+        };
+
+        window.Pusher = Pusher;
+        Pusher.logToConsole = true; // Very important for debug
+
+        const userId = 6;
+        const key = 'pyagbybv7uh9d8scjusx';
+
+        log(`Initializing Echo with key: ${key}`);
+
+        const echo = new Echo({
+            broadcaster: 'reverb',
+            key: key,
+            wsHost: '127.0.0.1',
+            wsPort: 8080,
+            forceTLS: false,
+            disableStats: true,
+            enabledTransports: ['ws']
+        });
+
+        echo.connector.pusher.connection.bind('state_change', (states) => {
+            document.getElementById('connection').innerText = `Connection: ${states.current.toUpperCase()}`;
+            log(`State changed from ${states.previous} to ${states.current}`);
+        });
+
+        echo.connector.pusher.connection.bind('error', (err) => {
+            log(`Connection Error! Check if reverb is on 127.0.0.1:8080`, true);
+            console.error(err);
+        });
+
+        log(`Subscribing to channel: sensor.${userId}`);
+
+        echo.channel(`sensor.${userId}`)
+            .listen('SensorUpdated', (e) => {
+                log(`DATA RECEIVED! ${JSON.stringify(e)}`);
+                document.getElementById('temp').innerText = e.data.actual.temperature;
+                document.getElementById('hum').innerText = e.data.actual.humidity;
+                document.getElementById('soil').innerText = e.data.actual.soil_moisture;
+            });
+    </script>
+</body>
+
+</html>

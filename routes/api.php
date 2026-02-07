@@ -26,4 +26,5 @@ Route::middleware('auth:api')->group(function () {
 
     //sensor 
     Route::post('sensor/live', [SensorController::class, 'live']);
+    Route::get('sensor/latest', [SensorController::class, 'latest']);
 });

@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\SensorController;
+use App\Http\Controllers\DeviceSettingController;
 
 Route::post("register", [AuthController::class, "register"]);
 Route::post("login", [AuthController::class, "login"]);
@@ -27,4 +28,10 @@ Route::middleware('auth:api')->group(function () {
     //sensor 
     Route::post('sensor/live', [SensorController::class, 'live']);
     Route::get('sensor/latest', [SensorController::class, 'latest']);
+
+    //device setting
+    Route::post('/device-settings', [DeviceSettingController::class, 'save'])
+    ->middleware('auth:api');
+
+
 });

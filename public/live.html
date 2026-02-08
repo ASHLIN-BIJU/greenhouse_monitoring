@@ -179,13 +179,17 @@
         window.Pusher = Pusher;
 
         // 🔁 CONFIGURATION
-        const userId = 6;
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('userId') || 6;
+        const token = urlParams.get('token');
         const REVERB_KEY = 'pyagbybv7uh9d8scjusx';
+
+        console.log(`Config: User=${userId}, Token=${token ? 'Present' : 'None'}`);
 
         const echo = new Echo({
             broadcaster: 'reverb',
             key: REVERB_KEY,
-            wsHost: '127.0.0.1',
+            wsHost: window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname,
             wsPort: 8080,
             forceTLS: false,
             disableStats: true,
@@ -196,23 +200,23 @@
 
         const updateActual = (data) => {
             if (!data) return;
-            document.getElementById('temp').innerText = parseFloat(data.temperature).toFixed(1);
-            document.getElementById('hum').innerText = parseFloat(data.humidity).toFixed(1);
-            document.getElementById('soil').innerText = parseFloat(data.soil_moisture).toFixed(1);
+            document.getElementById('temp').innerText = data.temperature ? parseFloat(data.temperature).toFixed(1) : '--';
+            document.getElementById('hum').innerText = data.humidity ? parseFloat(data.humidity).toFixed(1) : '--';
+            document.getElementById('soil').innerText = data.soil_moisture ? parseFloat(data.soil_moisture).toFixed(1) : '--';
         };
 
         const updateTarget = (data) => {
             if (!data) return;
-            document.getElementById('temp_target').innerText = parseFloat(data.temperature).toFixed(1);
-            document.getElementById('hum_target').innerText = parseFloat(data.humidity).toFixed(1);
-            document.getElementById('soil_target').innerText = parseFloat(data.soil_moisture).toFixed(1);
+            document.getElementById('temp_target').innerText = data.temperature ? parseFloat(data.temperature).toFixed(1) : '--';
+            document.getElementById('hum_target').innerText = data.humidity ? parseFloat(data.humidity).toFixed(1) : '--';
+            document.getElementById('soil_target').innerText = data.soil_moisture ? parseFloat(data.soil_moisture).toFixed(1) : '--';
         };
 
         // Connection Event
         console.log("Setting up echo for user:", userId);
 
         echo.connector.pusher.connection.bind('connected', () => {
-            statusEl.innerText = "Connected to Live Feed";
+            statusEl.innerText = `Connected to Live Feed (User ${userId})`;
             statusEl.className = "status connected";
             console.log("Successfully connected to Reverb!");
         });
@@ -221,16 +225,6 @@
             statusEl.innerText = "Connection Error!";
             statusEl.className = "status connecting";
             console.error("WebSocket Error:", err);
-            if (err.error && err.error.data) {
-                console.error("Error Detail:", err.error.data.code, err.error.data.message);
-            }
-        });
-
-        echo.connector.pusher.connection.bind('state_change', (states) => {
-            console.log("Connection State Changed:", states.current);
-            if (states.current === 'unavailable') {
-                statusEl.innerText = "Reverb Server Offline!";
-            }
         });
 
         echo.channel(`sensor.${userId}`)
@@ -240,9 +234,37 @@
                 updateTarget(e.data.target);
             });
 
-        // INITIAL FETCHING (Simulation since this is public/ and doesn't have Token)
-        // In a real app, these would be API calls with an Auth token.
-        // For verification, we show initial "--" until the first sensor data arrives.
+        // INITIAL FETCHING
+        async function fetchInitialData() {
+            if (!token) {
+                console.warn("No token provided in URL (?token=...). Skipping initial fetch.");
+                return;
+            }
+
+            try {
+                // Fetch Latest Reading
+                const readingRes = await fetch(`/api/sensor/latest`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (readingRes.ok) {
+                    const reading = await readingRes.json();
+                    updateActual(reading);
+                }
+
+                // Fetch Target Settings
+                const settingsRes = await fetch(`/api/settings`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (settingsRes.ok) {
+                    const settings = await settingsRes.json();
+                    updateTarget(settings);
+                }
+            } catch (err) {
+                console.error("Failed to fetch initial data:", err);
+            }
+        }
+
+        fetchInitialData();
     </script>
 
 </body>
